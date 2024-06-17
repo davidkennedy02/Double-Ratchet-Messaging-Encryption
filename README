@@ -1,0 +1,25 @@
+Note for use: 
+
+- To run the system, first install any dependencies 
+- Then run the server, followed by an instance of 'new_client'
+
+- To create a user, follow the instructions 
+- Similarly with logging in
+
+- To create a group, make sure you invite a member that exists! 
+
+- To refresh the state of the chat, hit enter - this will process any sent messages that haven't shown up 
+
+- To exit the group, write "/quit" and hit enter 
+
+- To add a user to a group, write "/invite" in the group and hit enter 
+    - You will be asked for the user's name - make sure they exist!
+
+- Please be careful to log out before exiting the terminal :) 
+
+- To return the database to it's initial state, log into the MYSQL database - the credentials are in the db_model file 
+    - Simply drop all tables within the dk94_cs4203 database 
+
+
+Thank you!
+
