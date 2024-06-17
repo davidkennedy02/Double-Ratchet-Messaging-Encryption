@@ -3,9 +3,9 @@ Following this, the parties will use the Double Ratchet to send and receive encr
 send Diffie-Hellman public values attached to their messages. The results of Diffie-Hellman calculations are mixed into the derived keys so that later keys cannot be calculated from earlier ones. These properties gives some protection to 
 earlier or later encrypted messages in case of a compromise of a party's keys." 
 
-Read more [here](https://signal.org/docs/specifications/doubleratchet/)
+Read more of the Signal Double Ratchet specification [here](https://signal.org/docs/specifications/doubleratchet/)
 
-Read my report here: [report.pdf](report.pdf)
+Read my report regarding my implementation of their algorithm [here](report.pdf)
 
 
 Notes for running the program: 
