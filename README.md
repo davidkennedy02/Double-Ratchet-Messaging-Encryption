@@ -19,8 +19,8 @@ Notes for running the program:
 
 - Then run the server, followed by an instance of 'new_client.py'
 
-- To create a user, follow the instructions 
-- Similarly with logging in
+- To create a user, follow the instructions given
+    - Similarly with logging in
 
 - To create a group, make sure you invite a member that exists! 
 
