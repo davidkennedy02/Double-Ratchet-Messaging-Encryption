@@ -5,15 +5,17 @@ earlier or later encrypted messages in case of a compromise of a party's keys."
 
 Read more [here](https://signal.org/docs/specifications/doubleratchet/)
 
+Read my report here: [report.pdf](report.pdf)
 
 
-Note for use: 
+Notes for running the program: 
 
 - To run the system, first install any dependencies using "pip install -r /requirements.txt"
 
 - Append the extension '.pem' to the files 'servercert' and 'serverkey'
 
-- Add your details to the 'db_model.py' file, allowing connection to a MySQL database 
+- Configure the connection details within the 'db_model.py' file, allowing connection to your MySQL database
+    - The installation and setup of MySQL is left to the user 
 
 - Then run the server, followed by an instance of 'new_client.py'
 
@@ -33,7 +35,3 @@ Note for use:
 
 - To return the database to it's initial state, log into the MYSQL database
     - Simply drop all tables within the database
-
-
-Thank you!
-
