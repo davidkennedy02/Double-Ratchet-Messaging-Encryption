@@ -1,4 +1,3 @@
-# importing the necessary modules.
 import socket
 import select
 import json
@@ -6,15 +5,40 @@ import db_model
 import ssl
 import bcrypt
 import base64
+import time
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import sessionmaker
 
-Session = db_model.sessionmaker(bind=db_model.engine)
-session = Session()
+Session = sessionmaker(bind=db_model.engine)
+
+# Retry logic for DB connection
+max_retries = 10
+retry_delay = 5
+session = None
+
+for i in range(max_retries):
+    try:
+        # Try to create tables to check connection
+        db_model.Base.metadata.create_all(db_model.engine)
+        session = Session()
+        print("Connected to database successfully.")
+        break
+    except OperationalError as e:
+        print(f"Database not ready yet, retrying in {retry_delay} seconds... ({i+1}/{max_retries})")
+        time.sleep(retry_delay)
+    except Exception as e:
+        print(f"Unexpected error connecting to DB: {e}")
+        time.sleep(retry_delay)
+
+if not session:
+    print("Could not connect to database after multiple retries.")
+    exit(1)
 
 # defining the header length.
 HEADER_LENGTH = 10
 
 # defining the IP address and Port Number.
-IP = "127.0.0.1"
+IP = "0.0.0.0"
 PORT = 5000
 
 """ 
@@ -67,14 +91,8 @@ def receive_message(client_socket: socket.socket):
 
     
 def createAccount(client_socket: socket.socket, userInfo):
-    """
-    One time passcode is possible, but need a gmail account with 2FA turned off. 
-    """
-
     print('Received a request to create an account...')
-
     print('Hashing password...')
-
     password = bcrypt.hashpw(bytes(userInfo['password'], 'utf-8'), base64.decodebytes(userInfo['salt'].encode('utf-8')))
 
     salt = userInfo['salt']
@@ -98,6 +116,7 @@ def createAccount(client_socket: socket.socket, userInfo):
         }
         
     except Exception as e:
+        session.rollback()
         print(e)
         print("User could not be added ")
 
@@ -119,25 +138,14 @@ def login(client_socket: socket.socket, userInfo):
     new messages. 
     """
 
-    # password = bcrypt.hashpw(bytes(userInfo['password'], 'utf-8'), base64.decodebytes(userInfo['salt'].encode('utf-8')))
-
     print('Received a request to log in...')
     try:
         existingUser = session.query(db_model.User).filter_by(username=userInfo['username']).first()
         assert(existingUser != None)
-        
         password = bcrypt.hashpw(bytes(userInfo['password'], 'utf-8'), base64.decodebytes((existingUser.salt).encode('utf-8')))
-
         assert password == bytes(existingUser.password, 'utf-8')
 
-        # Need to collect certs in one large file and pass this to args 
-        # Don't worry about deploying certificates for now, but could be done by implementing a simple CA 
-        # program on another port which listens and distributes certs!!
-            
-        
-
         # Assigning username to their socket 
-
         clients[existingUser.username] = client_socket
 
         for k, v in clients.items():
@@ -221,7 +229,7 @@ def createGroup(notified_socket: socket.socket, groupInfo):
         print('Failed response sent!')
     
     
-def sendMessage(notofied_socket: socket.socket, messageInfo):
+def sendMessage(messageInfo):
     '''
     payload = {
                 'request': 'send_message',
@@ -244,29 +252,9 @@ def sendMessage(notofied_socket: socket.socket, messageInfo):
 
     session.add(newMessage)
     session.commit()
-
-    # payload = {
-    #     'request': 'send_message',
-    #     'result': 'success'
-    # }
-
-    # serialisedResponse = json.dumps(payload).encode('utf-8')
-    # header = f"{len(serialisedResponse):<{HEADER_LENGTH}}".encode('utf-8')
-    # client_socket.send(header + serialisedResponse)
     
 
-def sendInvitation(notified_socket: socket.socket, messageInfo):
-    # 'request': 'invitation',
-    # 'addressee': member,
-    # 'content': {
-    #     'groupName': groupName,
-    #     'creator' :self.username,
-    #     'FIK': encodeKey(self.IK),
-    #     'FSPK': encodeKey(self.SPK),
-    #     'FEK': encodeKey(self.EK),
-    #     'FDH': encodeKey(initialMember.DHratchet)
-    # }
-
+def sendInvitation(messageInfo):
     print('Received a request to send an invitation...')
 
     newInvite = db_model.Message(address=messageInfo['addressee'], 
@@ -278,18 +266,8 @@ def sendInvitation(notified_socket: socket.socket, messageInfo):
     session.add(newInvite)
     session.commit()
 
-    # payload = {
-    #     'request': 'invitation',
-    #     'result': 'success'
-    # }
-
-    # serialisedResponse = json.dumps(payload).encode('utf-8')
-    # header = f"{len(serialisedResponse):<{HEADER_LENGTH}}".encode('utf-8')
-    # client_socket.send(header + serialisedResponse)
-
 
 def provideInvitation(notified_socket: socket.socket, messageInfo):
-
     print('Received a request to provide an invitation...')
 
     invitation = session.query(db_model.Message).filter_by(address=messageInfo['user'], type='invitation').first()
@@ -365,7 +343,7 @@ def provideMessage(notified_socket: socket.socket, messageInfo):
         notified_socket.send(header + serialisedResponse)
 
 
-def acceptInvitation(notified_socket: socket.socket, messageInfo):
+def acceptInvitation(messageInfo):
     
     '''
     payload = {
@@ -446,11 +424,9 @@ while True:
             client_socket, client_address = server_socket.accept()
 
             # Initial one-way wrapping of socket for encryption, but not authentication
-            client_socket = ssl.wrap_socket(client_socket,
-                                            server_side=True,
-                                            certfile="servercert.pem",
-                                            keyfile="serverkey.pem"
-                                            )
+            context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            context.load_cert_chain(certfile="servercert.pem", keyfile="serverkey.pem")
+            client_socket = context.wrap_socket(client_socket, server_side=True)
 
             message = receive_message(client_socket)
 
@@ -508,19 +484,19 @@ while True:
                 createGroup(notified_socket, messageInfo)
             
             elif messageInfo['request'] == 'send_message':
-                sendMessage(notified_socket, messageInfo)
+                sendMessage(messageInfo)
 
             elif messageInfo['request'] == 'request_message':
                 provideMessage(notified_socket, messageInfo)
 
             elif messageInfo['request'] == 'invitation':
-                sendInvitation(notified_socket, messageInfo)
+                sendInvitation(messageInfo)
 
             elif messageInfo['request'] == 'request_invitations':
                 provideInvitation(notified_socket, messageInfo)
 
             elif messageInfo['request'] == 'accept_invitation':
-                acceptInvitation(notified_socket, messageInfo)
+                acceptInvitation(messageInfo)
 
             elif messageInfo['request'] == 'user_details':
                 userDetails(notified_socket, messageInfo)

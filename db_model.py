@@ -1,20 +1,17 @@
-from __future__ import annotations
-from typing import List 
-from sqlalchemy import create_engine, Column, Table, Integer, String, DateTime, ForeignKey, select, text, URL
-from sqlalchemy.orm import  Mapped, mapped_column, relationship, sessionmaker
+from sqlalchemy import create_engine, Column, Table, Integer, String, ForeignKey, URL
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+import os
+from dotenv import load_dotenv
 
-# host=dk94.teaching.cs.st-andrews.ac.uk
-# user=dk94
-# password=tk3V!shm4sC207
-
+load_dotenv()
 
 connection_url = URL.create(
     "mysql+mysqlconnector",
-    username="dk94",
-    password="tk3V!shm4sC207",
-    host="dk94.teaching.cs.st-andrews.ac.uk",
-    database="dk94_cs4203",
+    username=os.getenv("DB_USER", "dk94"),
+    password=os.getenv("DB_PASSWORD", "tk3V!shm4sC207"),
+    host=os.getenv("DB_HOST", "dk94.teaching.cs.st-andrews.ac.uk"),
+    database=os.getenv("DB_NAME", "dk94_cs4203"),
 )
 
 engine = create_engine(connection_url)
@@ -31,10 +28,10 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     password = Column(String(250), unique=False, nullable=False)
     salt = Column(String(250), unique=True, nullable=False)
-    cert_tls = Column(String(5000), unique=True, nullable=False)
-    identity_key = Column(String(5000), unique=True, nullable=False)
-    signed_pre_key = Column(String(5000), unique=True, nullable=False)
-    signature = Column(String(5000), unique=True, nullable=False)
+    cert_tls = Column(String(3000), unique=False, nullable=False)
+    identity_key = Column(String(750), unique=True, nullable=False)
+    signed_pre_key = Column(String(750), unique=True, nullable=False)
+    signature = Column(String(750), unique=True, nullable=False)
 
 
 class Group(Base):
@@ -64,7 +61,3 @@ class Message(Base):
     group = Column(String(100), nullable=True)
     address = Column(String(100), ForeignKey('users.username'), nullable=False)
     content = Column(String(10000), nullable=False)
-
-
-Base.metadata.create_all(engine)
-
