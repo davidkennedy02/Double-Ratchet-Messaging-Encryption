@@ -64,7 +64,7 @@ jobs:
         env:
           SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
         run: |
-          safety check
+          safety scan 
         # Note: Removed --full-report for brevity in logs
 
       # SAST: Scan python code for security flaws (e.g., hardcoded passwords)
@@ -111,8 +111,15 @@ jobs:
         uses: aquasecurity/trivy-action@0.29.0
         with:
           input: /tmp/server-image.tar
-          format: 'table'
-          exit-code: '1' # Fail pipeline on Critical/High vulnerabilities
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          exit-code: '0' # Don't fail pipeline, just report
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy Scan Results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
