@@ -60,8 +60,9 @@ jobs:
 
       # SCA: Check for known vulnerabilities in requirements.txt
       - name: Dependency Vulnerability Scan (Safety)
+        continue-on-error: true
         run: |
-          safety check -r requirements.txt --continue-on-error
+          safety scan
         # Note: Removed --full-report for brevity in logs
 
       # SAST: Scan python code for security flaws (e.g., hardcoded passwords)
