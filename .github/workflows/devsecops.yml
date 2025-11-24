@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Gitleaks Secret Scan
-        uses: gitleaks/gitleaks-action@v2.3.2
+        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Failure here means a secret was found in the commit history
@@ -71,7 +71,7 @@ jobs:
 
       # Upload SAST results to GitHub Security Tab
       - name: Upload Analysis Results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() # Run even if Bandit found issues
         with:
           sarif_file: bandit-results.sarif
@@ -94,7 +94,7 @@ jobs:
 
       # Build the image but don't push it yet
       - name: Build Server Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.server
@@ -104,7 +104,7 @@ jobs:
 
       # Scan the built image with Trivy
       - name: Trivy Image Vulnerability Scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           input: /tmp/server-image.tar
           format: 'table'
